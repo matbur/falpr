@@ -2,42 +2,49 @@
 
 import os
 from multiprocessing.pool import Pool
+from time import time
 
 import requests
 
-from src.logger import get_logger
+from logger import get_logger
 
-logger = get_logger('scrapper')
+logger = get_logger('scraper')
 
 
-def scrap(url):
+def scrap(url, bytes_=False):
     try:
         req = requests.get(url)
-    except requests.exceptions.ConnectionError:
+        req.raise_for_status()
+    except (requests.exceptions.ConnectionError, requests.exceptions.HTTPError) as err:
+        logger.error(err)
         return
-    if req.raise_for_status():
-        return
+
+    if bytes_:
+        return req.content
+
     return req.text
 
 
-def collect(fn, data):
-    with open(fn, 'w') as f:
+def save(fn, data, bytes_=False):
+    mode = ('w', 'wb')[bytes_]
+    with open(fn, mode) as f:
         f.write(data)
 
 
 def worker(data):
-    fn, url = data
-    data = scrap(url)
+    fn, url, bytes_ = data
+    data = scrap(url, bytes_)
 
     if data is None:
-        logger.error('error with %s', url)
         return
 
-    collect(fn, data)
+    save(fn, data, bytes_)
     logger.info(url)
 
 
 def main():
+    t = time()
+
     data_dir = os.path.join('..', 'data')
     gallery_dir = os.path.join(data_dir, 'gallery')
     url = 'http://platesmania.com/pl/gallery'
@@ -50,7 +57,7 @@ def main():
     with Pool(4) as pool:
         pool.map(worker, data)
 
-    logger.info('done')
+    logger.info(f'Done in {time() - t}')
 
 
 if __name__ == '__main__':
