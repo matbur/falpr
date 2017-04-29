@@ -20,35 +20,50 @@ Y_ = tf.placeholder(tf.float32, [None, 10])
 
 lr = tf.placeholder(tf.float32)
 
-W1 = tf.Variable(tf.truncated_normal([5, 5, 1, K], stddev=.1))
-B1 = tf.Variable(tf.truncated_normal([K], stddev=.1))
-Y1 = tf.nn.relu(tf.nn.conv2d(X, W1, strides=[1, 1, 1, 1], padding='SAME') + B1)
-W2 = tf.Variable(tf.truncated_normal([5, 5, K, L], stddev=.1))
-B2 = tf.Variable(tf.truncated_normal([L], stddev=.1))
-Y2 = tf.nn.relu(tf.nn.conv2d(Y1, W2, strides=[1, 2, 2, 1], padding='SAME') + B2)
-W3 = tf.Variable(tf.truncated_normal([4, 4, L, M], stddev=.1))
-B3 = tf.Variable(tf.truncated_normal([M], stddev=.1))
-Y3 = tf.nn.relu(tf.nn.conv2d(Y2, W3, strides=[1, 2, 2, 1], padding='SAME') + B3)
+
+def conv_layer(input, w_shape, strides):
+    w = tf.Variable(tf.truncated_normal(shape=w_shape, stddev=.1))
+    b_shape = w_shape[-1:]
+    b = tf.Variable(tf.truncated_normal(shape=b_shape, mean=.1, stddev=.1))
+    conv = tf.nn.conv2d(input=input, filter=w, strides=strides, padding='SAME')
+    layer = tf.nn.relu(conv + b)
+    return layer
+
+
+def dense_layer(input, w_shape):
+    w = tf.Variable(tf.truncated_normal(shape=w_shape, stddev=.1))
+    b_shape = w_shape[-1:]
+    b = tf.Variable(tf.truncated_normal(shape=b_shape, mean=.1, stddev=.1))
+    layer = tf.nn.relu(features=tf.matmul(input, w) + b)
+    return layer
+
+
+def softmax_layer(input, w_shape):
+    w = tf.Variable(tf.truncated_normal(shape=w_shape, stddev=.1))
+    b_shape = w_shape[-1:]
+    b = tf.Variable(tf.truncated_normal(shape=b_shape, mean=.1, stddev=.1))
+    logits = tf.matmul(input, w) + b
+    layer = tf.nn.softmax(logits=logits)
+    return layer, logits
+
+
+Y1 = conv_layer(X, w_shape=[5, 5, 1, K], strides=[1, 1, 1, 1])
+Y2 = conv_layer(Y1, w_shape=[5, 5, K, L], strides=[1, 2, 2, 1])
+Y3 = conv_layer(Y2, w_shape=[4, 4, L, M], strides=[1, 2, 2, 1])
 
 YY = tf.reshape(Y3, [-1, 7 * 7 * M])
 
-W4 = tf.Variable(tf.truncated_normal([7 * 7 * M, N], stddev=.1))
-B4 = tf.Variable(tf.truncated_normal([N], stddev=.1))
-Y4 = tf.nn.relu(tf.matmul(YY, W4) + B4)
+Y4 = dense_layer(YY, w_shape=[7 * 7 * M, N])
 
-W5 = tf.Variable(tf.truncated_normal([N, S], stddev=.1))
-B5 = tf.Variable(tf.truncated_normal([S], stddev=.1))
-Y_logits = tf.matmul(Y4, W5) + B5
-Y = tf.nn.softmax(Y_logits)
+Y, Y_logits = softmax_layer(Y4, w_shape=[N, S])
 
 cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=Y_logits, labels=Y_)
-cross_entropy = tf.reduce_mean(cross_entropy) * 100
+# cross_entropy = tf.reduce_mean(cross_entropy) * 100
 
 correct_prediction = tf.equal(tf.argmax(Y, 1), tf.argmax(Y_, 1))
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 train_step = tf.train.AdamOptimizer(lr).minimize(cross_entropy)
-# train_step = tf.train.GradientDescentOptimizer(.1).minimize(cross_entropy)
 
 init = tf.global_variables_initializer()
 sess = tf.Session()
