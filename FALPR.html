@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8" />
-<title>FALPR</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
+<title>predict2</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
 
 <style type="text/css">
@@ -11782,6 +11782,10 @@ div#notebook {
 <h2 id="System-rozpoznawania-tablic-rejestracyjnych">System rozpoznawania tablic rejestracyjnych<a class="anchor-link" href="#System-rozpoznawania-tablic-rejestracyjnych">&#182;</a></h2><p>System za zadanie ma automatycznie rozpoznawanie znaków na zadanym zdjęciu pojazdu.</p>
 <p>Składa się on z kilku modułów, a ich współdziałanie obrazuje poniższy schemat blokowy:</p>
 <p><img src="block_scheme.png"></p>
+<h3 id="Krok-0---pobranie-danych-testowych">Krok 0 - pobranie danych testowych<a class="anchor-link" href="#Krok-0---pobranie-danych-testowych">&#182;</a></h3><p>Całą pracę rozpoczeliśmy od pobrania z Internetu przykładowych zdjęć samochodów.
+Na stronie <a href="http://rejestracja.blog.pl/">rejestracja.blog.pl</a> znajduje się baza ponad 30 tys. zdjęć.
+Napisaliśmy więc scrapper, który pobrał te wszystkie zdjęcia na dysk lokalny.
+Na szczęście nazwą zdjęcia był number tablicy rejestracyjnej, więc nie musieliśmy sami przypisywać etykiety do zdjęć.</p>
 
 </div>
 </div>
@@ -11849,7 +11853,7 @@ div#notebook {
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>&lt;matplotlib.image.AxesImage at 0x7fa7d6ac5f60&gt;</pre>
+<pre>&lt;matplotlib.image.AxesImage at 0x7fc280a18470&gt;</pre>
 </div>
 
 </div>
@@ -13308,7 +13312,7 @@ Na obrazach zawierających obiekt należy wskazać ich położenie tak, aby algo
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>&lt;matplotlib.image.AxesImage at 0x7fa7d44eb320&gt;</pre>
+<pre>&lt;matplotlib.image.AxesImage at 0x7fc2802de5f8&gt;</pre>
 </div>
 
 </div>
@@ -13871,7 +13875,7 @@ QkKH4P+H8jz1VjEqswAAAABJRU5ErkJggg==
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>&lt;matplotlib.image.AxesImage at 0x7fa7d44080b8&gt;</pre>
+<pre>&lt;matplotlib.image.AxesImage at 0x7fc2801f7588&gt;</pre>
 </div>
 
 </div>
@@ -14738,9 +14742,11 @@ Q4vMPEHWAAAAAElFTkSuQmCC
 Warstwa wejściowa przyjmuje tensory o rozmiarach [x, 64, 64, 1], gdzie x to liczba zdjęć na wejściu.
 Pozwala to jednocześnie uczyć sieć na wielu przykładach.</p>
 <p>Kolejne 3 pary warstw to warstwy, które występują w niemalże każdej sieci konwolucyjnej.
-Składają się z warstw konwolucyjnych i warstw dokonujących max-pooling, tj. wybór wartości największej z kwadratu o pewnym rozmiarze (w naszym przypadku 2x2).</p>
+Składają się z warstw konwolucyjnych, w których funkcją ReLU i warstw dokonujących max-pooling, tj. wybór wartości największej z kwadratu o pewnym rozmiarze (w naszym przypadku 2x2).</p>
+<p><img src="https://ml4a.github.io/images/figures/relu.png" alt="relu">
+<img src="http://img.blog.csdn.net/20160707140519962" alt="maxpooling"></p>
 <p>Następnie mamy warstwę w pełni połączoną.
-Po niej następuje warstwa dropout, która odrzuca losowe neurony z pewnym prawdopodobieństwem w czasie uczenia, w celu uniknięcia przeuczenia.</p>
+Po niej następuje warstwa dropout, która odrzuca losowe neurony z pewnym prawdopodobieństwem (u nas 50%) w czasie uczenia, w celu uniknięcia przeuczenia.</p>
 <p>Na koniec znajduje się kolejna warstwa w pełni połączona i warstwa wyjściowa, która zwraca wektor prawdopodobieństw o długości 36, gdyż mamy właśnie tyle etykiet.</p>
 <h4 id="Schemat-og&#243;lny-sieci-konwolucyjnej">Schemat og&#243;lny sieci konwolucyjnej<a class="anchor-link" href="#Schemat-og&#243;lny-sieci-konwolucyjnej">&#182;</a></h4><p><img src="https://ujwlkarn.files.wordpress.com/2016/08/screen-shot-2016-08-07-at-4-59-29-pm.png?w=748" /></p>
 
@@ -14780,7 +14786,10 @@ Po niej następuje warstwa dropout, która odrzuca losowe neurony z pewnym prawd
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="Krok-6---model">Krok 6 - model<a class="anchor-link" href="#Krok-6---model">&#182;</a></h3><p>Mając stworzoną sieć neuronową, wczytujemy do niej wytrenowane wcześniej wagi dla każdego neuronu, by móc przewidywać - z niemal 99% skutecznością - jakie znaki znajdują się na obrazkach.</p>
+<h3 id="Krok-6---model">Krok 6 - model<a class="anchor-link" href="#Krok-6---model">&#182;</a></h3><p>Mając stworzoną sieć neuronową, wczytujemy do niej wytrenowane wcześniej wagi dla każdego neuronu, by móc przewidywać, jakie znaki znajdują się na obrazkach.</p>
+<p>Model był uczony przez 4 epoki przy podziale wszystkich danych na 2 części: zbiór treningowy i zbiór testujący w proporcji 8:2 odpowiednio.
+Sieć uzyskała skuteczność ponad 98.9%, co jest wystarczająco dobrym wynikiem.
+Takie właśnie wagi zostały zapisane.</p>
 
 </div>
 </div>
